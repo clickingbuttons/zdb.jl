@@ -14,10 +14,10 @@ function renderFrame(indices::Vector{UInt32}, window::GLFW.Window, uni_world::In
   rads = Float32(t % (2 * pi))
   # projection * view * model
   g_world = GL.perspective_project(window) *
-    GL.look_at(Camera.main.eye, Camera.main.target, Camera.main.up) * 
-    GL.translate(0f0, 0f0, 0f0) *
-    #GL.rotateX(rads) *
-    #GL.rotateY(rads) *
+    GL.look_at(Camera.main.eye, Camera.main.direction, Camera.main.up) * 
+    #GL.translate(0f0, 0f0, 0f0) *
+    GL.rotateX(rads) *
+    GL.rotateY(rads) *
     GL.scale(0.5f0, 0.5f0, 0.5f0)
   glUniformMatrix4fv(uni_world, 1, GL_FALSE, pointer(g_world))
   glDrawElements(GL_TRIANGLE_STRIP, length(indices), GL_UNSIGNED_INT, C_NULL)

@@ -85,11 +85,11 @@ function rotate(quat::Vector{Float32})::Matrix{Float32}
   wy2 = 2f0 * quat[4] * quat[2]
   wx2 = 2f0 * quat[4] * quat[1]
   xx2 = 2f0 * quat[1]^2
-  [
-    1-yy2-zz2  xy2+wz2   xz2-wy2  0f0;
-     xy2-wz2  1-xx2-zz2  yz2+wx2  0f0;
-     xz2+wy2   yz2-wx2  1-xx2-yy2 0f0;
-       0f0       0f0      0f0     1f0;
+  Float32[
+    1-yy2-zz2  xy2+wz2   xz2-wy2  0;
+     xy2-wz2  1-xx2-zz2  yz2+wx2  0;
+     xz2+wy2   yz2-wx2  1-xx2-yy2 0;
+        0         0         0     1;
   ]
 end
 
@@ -97,50 +97,50 @@ function rotateX(rads::Float32)::Matrix{Float32}
   c = cos(rads)
   s = sin(rads)
   [
-    1f0 0f0 0f0 0f0
-    0f0  c  -s  0f0
-    0f0  s   c  0f0
-    0f0 0f0 0f0 1f0
+    1 0  0 0;
+    0 c -s 0;
+    0 s  c 0;
+    0 0  0 1;
   ]
 end
 
 function rotateY(rads::Float32)::Matrix{Float32}
   c = cos(rads)
   s = sin(rads)
-  [
-     c  0f0  s  0f0
-    0f0 1f0 0f0 0f0
-    -s  0f0  c  0f0
-    0f0 0f0 0f0 1f0
+  Float32[
+     c  0 s 0;
+     0  1 0 0;
+    -s  0 c 0;
+     0  0 0 1;
   ]
 end
 
 function rotateZ(rads::Float32)::Matrix{Float32}
   c = cos(rads)
   s = sin(rads)
-  [
-     c  -s  0f0 0f0
-     s   c  0f0 0f0
-    0f0 0f0 1f0 0f0
-    0f0 0f0 0f0 1f0
+  Float32[
+    c -s 0 0;
+    s  c 0 0;
+    0  0 1 0;
+    0  0 0 1;
   ]
 end
 
 function translate(x::Float32, y::Float32, z::Float32)::Matrix{Float32}
-  [
-    1f0 0f0 0f0 x;
-    0f0 1f0 0f0 y;
-    0f0 0f0 1f0 z;
-    0f0 0f0 0f0 1f0;
+  Float32[
+    1 0 0 x;
+    0 1 0 y;
+    0 0 1 z;
+    0 0 0 1;
   ]
 end
 
 function scale(x::Float32, y::Float32, z::Float32)::Matrix{Float32}
-  [
-     x  0f0 0f0 0f0
-    0f0  y  0f0 0f0
-    0f0 0f0  z  0f0
-    0f0 0f0 0f0 1f0
+  Float32[
+    x 0 0 0;
+    0 y 0 0;
+    0 0 z 0;
+    0 0 0 1;
   ]
 end
 
@@ -156,27 +156,46 @@ function perspective_project(window::GLFW.Window)::Matrix{Float32}
   A = (-z_far - z_near) / z_range
   B = 2f0 * z_far * z_near / z_range
 
-  [
-    f/ar 0f0 0f0 0f0;
-    0f0   f  0f0 0f0;
-    0f0  0f0  A   B ;
-    0f0  0f0 1f0 0f0;
+  Float32[
+    f/ar 0 0 0;
+     0   f 0 0;
+     0   0 A B;
+     0   0 1 0;
   ]
 end
 
-function look_at(eye::Vector{Float32}, center::Vector{Float32}, up::Vector{Float32})::Matrix{Float32}
-  f = normalize(center - eye)
-  u = normalize(up)
-  s = normalize(cross(f, u))
-  u = cross(s, f)
+function look_at(eye::Vector{Float32}, direction::Vector{Float32}, up::Vector{Float32})::Matrix{Float32}
+  z = normalize(direction)
+  x = normalize(cross(up, z))
+  y = cross(z, x)
 
-  [
-     s[1]  s[2]   s[3] -dot(s, eye);
-     u[1]  u[2]   u[3] -dot(u, eye);
-    -f[1] -f[2]  -f[3] -dot(f, eye);
-      0     0      0        1;
+  Float32[
+    x[1] x[2] x[3] dot(x, eye);
+    y[1] y[2] y[3] dot(y, eye);
+    z[1] z[2] z[3] dot(z, eye);
+     0    0    0        1     ;
   ]
 end
+
+#=
+function look_at_fps(eye::Vector{Float32}, pitch::Float32, yaw::Float32)::Matrix{Float32}
+  sp = sin(pitch)
+  cp = cos(pitch)
+  sy = sin(yaw)
+  cy = cos(yaw)
+
+  x = Float32[cy, 0, -sy]
+  y = Float32[sy*sp, cp, cy*sp]
+  z = Float32[sy*cp, -sp, cp*cy]
+
+  Float32[
+    x[1] y[1] z[1] 0;
+    x[2] y[2] z[2] 0;
+    x[3] y[3] z[3] 0;
+    -dot(x, eye) -dot(y, eye) -dot(z, eye) 1;
+  ]
+end
+=#
 
 end
 
