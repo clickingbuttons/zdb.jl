@@ -3,6 +3,12 @@ module Window
 using ModernGL
 using GLFW
 
+key_callbacks = []
+click_callbacks = []
+cursor_move_callbacks = []
+cursor_enter_callbacks = []
+scroll_callbacks = []
+
 function create_window()
   GLFW.DefaultWindowHints()
   GLFW.WindowHint(GLFW.RESIZABLE, GL_FALSE)
@@ -16,12 +22,28 @@ function create_window()
   @info "Renderder: $(unsafe_string(glGetString(GL_RENDERER)))"
   @info "OpenGL version supported: $(unsafe_string(glGetString(GL_VERSION)))"
 
-  GLFW.SetCharModsCallback(window, (_, c, mods) -> println("char: $c, mods: $mods"))
-  GLFW.SetMouseButtonCallback(window, (_, button, action, mods) -> println("$button $action"))
-  #GLFW.SetCursorPosCallback(window, (_, xoff, yoff) -> println("mouse: $xoff $yoff"))
-  GLFW.SetScrollCallback(window, (_, xoff, yoff) -> println("scroll: $xoff, $yoff"))
+  GLFW.SetCharModsCallback(window, (window, char, mods) -> begin
+    println("char: $char, mods: $mods")
+    foreach(cb -> cb(window, char, mods), key_callbacks)
+  end)
+  GLFW.SetMouseButtonCallback(window, (window, button, action, mods) -> begin
+    println("$button $action")
+    foreach(cb -> cb(window, button, action, mods), click_callbacks)
+  end)
+  GLFW.SetCursorPosCallback(window, (window, xoff, yoff) -> begin
+    #println("mouse: $xoff $yoff")
+    foreach(cb -> cb(window, xoff, yoff), cursor_move_callbacks)
+  end)
+  GLFW.SetCursorEnterCallback(window, (window, entered) -> begin
+    println("enter: $entered")
+    foreach(cb -> cb(window, entered), cursor_enter_callbacks)
+  end)
+  GLFW.SetScrollCallback(window, (window, xoff, yoff) -> begin
+    println("scroll: $xoff, $yoff")
+    foreach(cb -> cb(window, xoff, yoff), scroll_callbacks)
+  end)
   function onResize(_, w, h)
-    println("window size: $w x $h")
+    println("resize: $w x $h")
     glViewport(0, 0, w, h)
   end
   GLFW.SetWindowSizeCallback(window, onResize)

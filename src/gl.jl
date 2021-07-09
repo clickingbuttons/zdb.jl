@@ -12,7 +12,31 @@ function sourcecompileshader(shaderID::GLuint, shadercode::String)::Nothing
   glCompileShader(shaderID)
 end
 
+function gl_debug_callback(
+  source::GLenum,
+  type::GLenum,
+  id::GLuint,
+  severity::GLenum,
+  length::GLsizei,
+  message::Ptr{GLchar},
+  user_param::Ptr{Cvoid}
+)
+  if type == GL_DEBUG_TYPE_ERROR
+    @error "0x$(string(type, base = 16)): $(unsafe_string(message))"
+  else
+    @info "0x$(string(type, base = 16)): $(unsafe_string(message))"
+  end
+end
+
+function init_debug()
+  gl_debug_callback_ptr = @cfunction(gl_debug_callback, Cvoid, (GLenum, GLenum, GLuint, GLenum, GLsizei, Ptr{GLchar}, Ptr{Cvoid}))
+  glEnable(GL_DEBUG_OUTPUT)
+  user_param = Ref{Int64}(0)
+  glDebugMessageCallback(gl_debug_callback_ptr, user_param)
+end
+
 function init_shaders()::UInt32
+  init_debug()
   vertex_shader = glCreateShader(GL_VERTEX_SHADER)
   GL.sourcecompileshader(vertex_shader, """
   #version 330 core
@@ -46,19 +70,64 @@ function init_shaders()::UInt32
   shader_program
 end
 
-function rotate(degs::Float32, normal::Vector{Float32})::Matrix{Float32}
-  sin_a = Float32(sin(time()))
-  cos_a = Float32(cos(time()))
+# https://eater.net/quaternions/video/intro
+# quat1 = Float32[1, 1, 0]
+# quat1 /= norm(quat1)
+# rotation1 = quat1 * Float32(sin(t))
+# push!(rotation1, cos(t))
+function rotate(quat::Vector{Float32})::Matrix{Float32}
+  yy2 = 2f0 * quat[2]^2
+  xy2 = 2f0 * quat[1] * quat[2]
+  xz2 = 2f0 * quat[1] * quat[3]
+  yz2 = 2f0 * quat[2] * quat[3]
+  zz2 = 2f0 * quat[3]^2 
+  wz2 = 2f0 * quat[4] * quat[3]
+  wy2 = 2f0 * quat[4] * quat[2]
+  wx2 = 2f0 * quat[4] * quat[1]
+  xx2 = 2f0 * quat[1]^2
   [
-    cos_a 0f0 -sin_a 0f0;
-    0f0 1f0 0f0 0f0;
-    sin_a 0f0 cos_a 0f0;
-    0f0 0f0 0f0 1f0;
+    1-yy2-zz2  xy2+wz2   xz2-wy2  0f0;
+     xy2-wz2  1-xx2-zz2  yz2+wx2  0f0;
+     xz2+wy2   yz2-wx2  1-xx2-yy2 0f0;
+       0f0       0f0      0f0     1f0;
+  ]
+end
+
+function rotateX(rads::Float32)::Matrix{Float32}
+  c = cos(rads)
+  s = sin(rads)
+  [
+    1f0 0f0 0f0 0f0
+    0f0  c  -s  0f0
+    0f0  s   c  0f0
+    0f0 0f0 0f0 1f0
+  ]
+end
+
+function rotateY(rads::Float32)::Matrix{Float32}
+  c = cos(rads)
+  s = sin(rads)
+  [
+     c  0f0  s  0f0
+    0f0 1f0 0f0 0f0
+    -s  0f0  c  0f0
+    0f0 0f0 0f0 1f0
+  ]
+end
+
+function rotateZ(rads::Float32)::Matrix{Float32}
+  c = cos(rads)
+  s = sin(rads)
+  [
+     c  -s  0f0 0f0
+     s   c  0f0 0f0
+    0f0 0f0 1f0 0f0
+    0f0 0f0 0f0 1f0
   ]
 end
 
 function translate(x::Float32, y::Float32, z::Float32)::Matrix{Float32}
-  res = [
+  [
     1f0 0f0 0f0 x;
     0f0 1f0 0f0 y;
     0f0 0f0 1f0 z;
@@ -87,15 +156,12 @@ function perspective_project(window::GLFW.Window)::Matrix{Float32}
   A = (-z_far - z_near) / z_range
   B = 2f0 * z_far * z_near / z_range
 
-  res = [
+  [
     f/ar 0f0 0f0 0f0;
     0f0   f  0f0 0f0;
     0f0  0f0  A   B ;
     0f0  0f0 1f0 0f0;
   ]
-
-  #res = Matrix{Float32}(I, 4, 4)
-  res
 end
 
 function look_at(eye::Vector{Float32}, center::Vector{Float32}, up::Vector{Float32})::Matrix{Float32}
@@ -105,10 +171,10 @@ function look_at(eye::Vector{Float32}, center::Vector{Float32}, up::Vector{Float
   u = cross(s, f)
 
   [
-    s[1] u[1] -f[1] 0;
-    s[2] u[2] -f[2] 0;
-    s[3] u[3] -f[3] 0;
-    -dot(s, eye) -dot(u, eye) -dot(f, eye) 1;
+     s[1]  s[2]   s[3] -dot(s, eye);
+     u[1]  u[2]   u[3] -dot(u, eye);
+    -f[1] -f[2]  -f[3] -dot(f, eye);
+      0     0      0        1;
   ]
 end
 

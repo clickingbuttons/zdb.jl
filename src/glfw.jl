@@ -1,38 +1,31 @@
 using GLFW
 using ModernGL
 using Logging
+using LinearAlgebra
 
 include("./window.jl")
 include("./gl.jl")
+include("./camera.jl")
 
-frame = 0
-eye = Float32[1, 3, 0]
-target = Float32[1.5, 0, 0]
-up = Float32[0, 1, 0]
+function renderFrame(indices::Vector{UInt32}, window::GLFW.Window, uni_world::Int32)
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-function gl_debug_callback(
-  source::GLenum,
-  type::GLenum,
-  id::GLuint,
-  severity::GLenum,
-  length::GLsizei,
-  message::Ptr{GLchar},
-  user_param::Ptr{Cvoid}
-)
-  if type == GL_DEBUG_TYPE_ERROR
-    @error "0x$(string(type, base = 16)): $(unsafe_string(message))"
-  else
-    @info "0x$(string(type, base = 16)): $(unsafe_string(message))"
-  end
+  t = time()
+  rads = Float32(t % (2 * pi))
+  # projection * view * model
+  g_world = GL.perspective_project(window) *
+    GL.look_at(Camera.main.eye, Camera.main.target, Camera.main.up) * 
+    GL.translate(0f0, 0f0, 0f0) *
+    #GL.rotateX(rads) *
+    #GL.rotateY(rads) *
+    GL.scale(0.5f0, 0.5f0, 0.5f0)
+  glUniformMatrix4fv(uni_world, 1, GL_FALSE, pointer(g_world))
+  glDrawElements(GL_TRIANGLE_STRIP, length(indices), GL_UNSIGNED_INT, C_NULL)
 end
 
 function main()
   window = Window.create_window()
-
-  gl_debug_callback_ptr = @cfunction(gl_debug_callback, Cvoid, (GLenum, GLenum, GLuint, GLenum, GLsizei, Ptr{GLchar}, Ptr{Cvoid}))
-  glEnable(GL_DEBUG_OUTPUT)
-  user_param = Ref{Int64}(0)
-  glDebugMessageCallback(gl_debug_callback_ptr, user_param)
+  GL.init_debug()
   shader_program = GL.init_shaders()
 
   # Cube to draw
@@ -73,27 +66,24 @@ function main()
 
   glClearColor(0.2, 0.3, 0.3, 1.0)
   glEnable(GL_DEPTH_TEST)
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+  #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
+  frame = 0
+  loop_time = 0.0
+  quat1 = normalize(Float32[1, 1, 0])
+  quat2 = normalize(Float32[0, 1, 1])
+  loop_time0 = time()
   while !GLFW.WindowShouldClose(window)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    Camera.handleInput(window, loop_time)
 
-    radius = 1
-    camX   = sin(time()) * radius
-    camZ   = cos(time()) * radius
-
-    # projection * view * model
-    g_world = GL.perspective_project(window) *
-      GL.look_at(eye, target, up) * 
-      GL.translate(1.5f0, 0f0, 0f0) *
-      GL.rotate(Float32(time()), Float32[0, 0, 1]) *
-      GL.scale(0.5f0, 0.5f0, 0.5f0)
-    glUniformMatrix4fv(uni_world, 1, GL_FALSE, pointer(g_world))
-    glDrawElements(GL_TRIANGLE_STRIP, length(indices), GL_UNSIGNED_INT, C_NULL)
-
-    GLFW.PollEvents()
+    renderFrame(indices, window, uni_world)
     GLFW.SwapBuffers(window)
-    global frame += 1
+    GLFW.PollEvents()
+
+    frame += 1
+    t = time()
+    loop_time = t - loop_time0
+    loop_time0 = t
   end
   GLFW.DestroyWindow(window)
   println(frame, " frames")
