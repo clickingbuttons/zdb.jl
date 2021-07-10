@@ -35,41 +35,6 @@ function init_debug()
   glDebugMessageCallback(gl_debug_callback_ptr, user_param)
 end
 
-function init_shaders()::UInt32
-  init_debug()
-  vertex_shader = glCreateShader(GL_VERTEX_SHADER)
-  GL.sourcecompileshader(vertex_shader, """
-  #version 330 core
-  layout (location = 0) in vec3 Position;
-  uniform mat4 gWorld;
-  out vec4 Color;
-  void main()
-  {
-    gl_Position = gWorld * vec4(Position, 1.0);
-    Color = vec4(clamp(Position, 0.0, 1.0), 1.0);
-  }
-  """)
-
-  fragment_shader = glCreateShader(GL_FRAGMENT_SHADER)
-  GL.sourcecompileshader(fragment_shader, """
-  #version 330 core
-  in vec4 Color;
-  out vec4 outColor;
-  void main()
-  {
-    outColor = Color;
-  }   
-  """)
-
-  shader_program = glCreateProgram()
-  glAttachShader(shader_program, vertex_shader)
-  glAttachShader(shader_program, fragment_shader)
-  glLinkProgram(shader_program)
-  glUseProgram(shader_program)
-
-  shader_program
-end
-
 # https://eater.net/quaternions/video/intro
 # quat1 = Float32[1, 1, 0]
 # quat1 /= norm(quat1)
