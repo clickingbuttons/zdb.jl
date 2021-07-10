@@ -3,14 +3,7 @@ module Cube
 using ModernGL
 include("./gl.jl")
 
-struct RenderData
-  program::GLuint
-  ebo::GLuint
-  uniform::GLint
-  num_indices::GLsizei
-end
-
-function getProgram()::UInt32
+function getProgram()::GLuint
   vertex_shader = glCreateShader(GL_VERTEX_SHADER)
   GL.sourcecompileshader(vertex_shader, """
   #version 330 core
@@ -77,27 +70,26 @@ function getEbo()::NamedTuple{(:ebo, :num_indices), Tuple{GLuint, GLsizei}}
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[])
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW)
 
-  (ebo=ebo[], num_indices=GLsizei(length(indices)))
+  (ebo=ebo[], num_indices=length(indices))
 end
 
-function getPipeline()::RenderData
-  shader_program = getProgram()
-  uni_world = glGetUniformLocation(shader_program, "gWorld")
-  (ebo, num_indices) = getEbo()
+# Global variables needed for each render
+const shader_program = Ref{GLuint}(0)
+const ebo = Ref{GLuint}(0)
+const uni_world = Ref{GLint}(0)
+const num_indices = Ref{GLsizei}(0)
 
-  RenderData(
-    shader_program,
-    ebo,
-    uni_world,
-    num_indices
-  )
+function init()
+  shader_program[] = getProgram()
+  uni_world[] = glGetUniformLocation(shader_program[], "gWorld")
+  (ebo[], num_indices[]) = getEbo()
 end
 
-function renderFrame(data::RenderData, g_world::Matrix{Float32})
-  glUseProgram(data.program)
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, data.ebo)
-  glUniformMatrix4fv(data.uniform, 1, GL_FALSE, pointer(g_world))
-  glDrawElements(GL_TRIANGLE_STRIP, data.num_indices, GL_UNSIGNED_INT, C_NULL)
+function renderFrame(g_world::Matrix{Float32})
+  glUseProgram(shader_program[])
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[])
+  glUniformMatrix4fv(uni_world[], 1, GL_FALSE, pointer(g_world))
+  glDrawElements(GL_TRIANGLE_STRIP, num_indices[], GL_UNSIGNED_INT, C_NULL)
 end
 
 end

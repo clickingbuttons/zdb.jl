@@ -9,7 +9,7 @@ include("./gl.jl")
 include("./camera.jl")
 include("./cube.jl")
 
-function renderFrame(window::GLFW.Window, cube_data::Cube.RenderData)
+function renderFrame(window::GLFW.Window)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
   t = time()
@@ -21,19 +21,17 @@ function renderFrame(window::GLFW.Window, cube_data::Cube.RenderData)
     #GL.rotateX(rads) *
     #GL.rotateY(rads) *
     GL.scale(0.5f0, 0.5f0, 0.5f0)
-  Cube.renderFrame(cube_data, g_world)
+  Cube.renderFrame(g_world)
 end
 
 function main()
   window = Window.create_window()
   GL.init_debug()
-
+  Cube.init()
 
   glClearColor(0.2, 0.3, 0.3, 1.0)
   glEnable(GL_DEPTH_TEST)
   #glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-  cube_pipeline = Cube.getPipeline()
-  println(cube_pipeline)
 
   frame = 0
   loop_time = 0.0
@@ -41,7 +39,7 @@ function main()
   while !GLFW.WindowShouldClose(window)
     Camera.handleInput(window, loop_time, Camera.main, Camera.state)
 
-    renderFrame(window, cube_pipeline)
+    renderFrame(window)
     GLFW.SwapBuffers(window)
     GLFW.PollEvents()
 
