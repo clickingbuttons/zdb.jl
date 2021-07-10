@@ -2,6 +2,7 @@ using GLFW
 using ModernGL
 using Logging
 using LinearAlgebra
+using InteractiveUtils
 
 include("./window.jl")
 include("./gl.jl")
@@ -73,8 +74,10 @@ function main()
   quat1 = normalize(Float32[1, 1, 0])
   quat2 = normalize(Float32[0, 1, 1])
   loop_time0 = time()
+
+  #@code_warntype Camera.handleInput(window, loop_time, Camera.main, Camera.state)
   while !GLFW.WindowShouldClose(window)
-    Camera.handleInput(window, loop_time)
+    Camera.handleInput(window, loop_time, Camera.main, Camera.state)
 
     renderFrame(indices, window, uni_world)
     GLFW.SwapBuffers(window)
