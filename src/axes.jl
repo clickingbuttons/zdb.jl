@@ -1,4 +1,4 @@
-module Cube
+module Axes
 
 using ModernGL
 include("./gl.jl")
@@ -8,12 +8,13 @@ function getProgram()::GLuint
   GL.sourcecompileshader(vertex_shader, """
   #version 330 core
   layout (location = 0) in vec3 Position;
+  layout (location = 1) in vec3 inColor;
   uniform mat4 gWorld;
   out vec4 Color;
   void main()
   {
     gl_Position = gWorld * vec4(Position, 1.0);
-    Color = vec4(clamp(Position, 0.0, 1.0), 1.0);
+    Color = vec4(inColor, 1.0);
   }
   """)
 
@@ -36,25 +37,22 @@ function getProgram()::GLuint
   shader_program
 end
 
-function getEbo()::NamedTuple{(:ebo, :vao, :num_indices), Tuple{GLuint, GLuint, GLsizei}}
+function getVbo()::NamedTuple{(:vbo, :vao, :num_arrays), Tuple{GLuint, GLuint, GLsizei}}
   vertices = Float32[
-    +.5, +.5, -.5,
-    -.5, +.5, -.5,
-    +.5, -.5, -.5,
-    -.5, -.5, -.5,
-    +.5, +.5, +.5,
-    -.5, +.5, +.5,
-    -.5, -.5, +.5,
-    +.5, -.5, +.5,
-  ]
-  indices = UInt32[
-    3, 2, 6, 7, 4, 2, 0,
-    3, 1, 6, 5, 4, 1, 0
+    # pos     ,  color
+    # x
+    -10,  0,  0,  1, 0, 0,
+     10,  0,  0,  1, 0, 0,
+    # y
+     0, -10,  0,  0, 1, 0,
+     0,  10,  0,  0, 1, 0,
+    # z
+     0,  0, -10,  0, 0, 1,
+     0,  0,  10,  0, 0, 1,
   ]
 
   vbo = Ref(GLuint(0))
   vao = Ref(GLuint(0))
-  ebo = Ref(GLuint(0))
 
   glGenVertexArrays(1, vao)
   glBindVertexArray(vao[])
@@ -64,34 +62,34 @@ function getEbo()::NamedTuple{(:ebo, :vao, :num_indices), Tuple{GLuint, GLuint, 
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW)
 
   glEnableVertexAttribArray(0)
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Float32), C_NULL)
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(Float32), C_NULL)
+  glEnableVertexAttribArray(1)
+  stride = Core.bitcast(Ptr{Cvoid}, 3 * sizeof(Float32))
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(Float32), stride)
 
-  glGenBuffers(1, ebo)
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[])
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW)
 
-  (ebo=ebo[], vao=vao[], num_indices=length(indices))
+  (vbo=vbo[], vao=vao[], num_arrays=length(vertices) / 6)
 end
 
 # Global variables needed for each render
 const shader_program = Ref{GLuint}(0)
-const ebo = Ref{GLuint}(0)
+const vbo = Ref{GLuint}(0)
 const vao = Ref{GLuint}(0)
 const uni_world = Ref{GLint}(0)
-const num_indices = Ref{GLsizei}(0)
+const num_arrays = Ref{GLsizei}(0)
 
 function init()
   shader_program[] = getProgram()
   uni_world[] = glGetUniformLocation(shader_program[], "gWorld")
-  (ebo[], vao[], num_indices[]) = getEbo()
+  (vbo[], vao[], num_arrays[]) = getVbo()
 end
 
 function renderFrame(g_world::Matrix{Float32})
   glUseProgram(shader_program[])
   glBindVertexArray(vao[])
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[])
+  glBindBuffer(GL_ARRAY_BUFFER, vbo[])
   glUniformMatrix4fv(uni_world[], 1, GL_FALSE, pointer(g_world))
-  glDrawElements(GL_TRIANGLE_STRIP, num_indices[], GL_UNSIGNED_INT, C_NULL)
+  glDrawArrays(GL_LINES, 0, num_arrays[])
 end
 
 end

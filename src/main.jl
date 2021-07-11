@@ -7,6 +7,7 @@ using InteractiveUtils
 include("./window.jl")
 include("./gl.jl")
 include("./camera.jl")
+include("./axes.jl")
 include("./cube.jl")
 
 function renderFrame(window::GLFW.Window)
@@ -21,12 +22,14 @@ function renderFrame(window::GLFW.Window)
     #GL.rotateX(rads) *
     #GL.rotateY(rads) *
     GL.scale(0.5f0, 0.5f0, 0.5f0)
+  Axes.renderFrame(g_world)
   Cube.renderFrame(g_world)
 end
 
 function main()
-  window = Window.create_window()
-  GL.init_debug()
+  window = Window.createWindow()
+  GL.initDebug()
+  Axes.init()
   Cube.init()
 
   glClearColor(0.2, 0.3, 0.3, 1.0)

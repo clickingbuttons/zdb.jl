@@ -9,7 +9,7 @@ cursor_move_callbacks = []
 cursor_enter_callbacks = []
 scroll_callbacks = []
 
-function create_window()
+function createWindow()
   GLFW.DefaultWindowHints()
   GLFW.WindowHint(GLFW.RESIZABLE, GL_FALSE)
   GLFW.WindowHint(GLFW.SAMPLES, 16)

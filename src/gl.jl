@@ -12,7 +12,7 @@ function sourcecompileshader(shaderID::GLuint, shadercode::String)::Nothing
   glCompileShader(shaderID)
 end
 
-function gl_debug_callback(
+function glDebugCallback(
   source::GLenum,
   type::GLenum,
   id::GLuint,
@@ -28,8 +28,8 @@ function gl_debug_callback(
   end
 end
 
-function init_debug()
-  gl_debug_callback_ptr = @cfunction(gl_debug_callback, Cvoid, (GLenum, GLenum, GLuint, GLenum, GLsizei, Ptr{GLchar}, Ptr{Cvoid}))
+function initDebug()
+  gl_debug_callback_ptr = @cfunction(glDebugCallback, Cvoid, (GLenum, GLenum, GLuint, GLenum, GLsizei, Ptr{GLchar}, Ptr{Cvoid}))
   glEnable(GL_DEBUG_OUTPUT)
   user_param = Ref{Int64}(0)
   glDebugMessageCallback(gl_debug_callback_ptr, user_param)
