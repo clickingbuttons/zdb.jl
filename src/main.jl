@@ -17,11 +17,11 @@ function renderFrame(window::GLFW.Window)
   rads = Float32(t % (2 * pi))
   # projection * view * model
   g_world = GL.perspective_project(window) *
-    GL.look_at(Camera.main.eye, Camera.main.direction, Camera.main.up) * 
+    GL.look_at(Camera.main.eye, Camera.main.direction, Camera.main.up) 
     #GL.translate(0f0, 0f0, 0f0) *
     #GL.rotateX(rads) *
     #GL.rotateY(rads) *
-    GL.scale(0.5f0, 0.5f0, 0.5f0)
+    #GL.scale(0.5f0, 0.5f0, 0.5f0)
   Axes.renderFrame(g_world)
   Cube.renderFrame(g_world)
 end
