@@ -63,8 +63,8 @@ function init_buffers()
   glEnableVertexAttribArray(0)
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(Float32), C_NULL)
   glEnableVertexAttribArray(1)
-  stride = Ptr{Cvoid}(3 * sizeof(Float32))
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(Float32), stride)
+  offset = Ptr{Cvoid}(3 * sizeof(Float32))
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(Float32), offset)
 end
 
 function init()
