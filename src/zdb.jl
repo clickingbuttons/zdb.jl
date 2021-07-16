@@ -1,11 +1,12 @@
 module zdb
+
 using Dates
 using HTTP
 using JSON3
 using Serialization
 
 BASE_URL = "http://localhost:7878"
-nanoseconds(x::DateTime) = (Dates.value(x) - Dates.UNIXEPOCH) * 1_000_000
+nanoseconds(x::DateTime)::Int64 = (Dates.value(x) - Dates.UNIXEPOCH) * 1_000_000
 
 function symbols(table::String, column::String)::Vector{String}
   req = HTTP.request("GET", "$BASE_URL/symbols/$table/$column")
@@ -32,5 +33,5 @@ function query(table::String, from::Union{Int64,String}, to::Union{Int64,String}
   deserialize(IOBuffer(req.body))
 end
 
-end # module
+end
 
