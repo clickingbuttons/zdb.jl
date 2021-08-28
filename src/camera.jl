@@ -12,11 +12,11 @@ mutable struct Cam
 end
 
 main = Cam(
-  [4.843434, 5.2988853, 16.667112],
-  [0.059572607, 0.23055634, 0.9712337],
+  [-3.4438117, -1.6785045, -9.841953],
+  [0.020469321, -0.45189014, -0.8918387],
   [0.0, 0.0, 1.0],
-  0.23264939f0,
-  1.509536f0
+  -1.1013938f0,
+  -9.470044f0
 )
 
 mutable struct GlobalCamState
@@ -80,9 +80,9 @@ function handleInput(window::GLFW.Window, loop_time::Float64, cam::Cam, state::G
   end
 
   cam.direction = normalize(Float32[
+    sin(cam.yaw) * cos(cam.pitch),
     cos(cam.yaw) * cos(cam.pitch),
     sin(cam.pitch),
-    sin(cam.yaw) * cos(cam.pitch)
   ])
 end
 

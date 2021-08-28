@@ -59,7 +59,7 @@ const indices = UInt32[
 ]
 num_cubes = 0
 
-function init_buffers(minute_buckets) #::Vector{Int64, Aggs.MinuteBucket})
+function init_buffers(minute_bucket_range)
   # position
   vbo = Ref{GLuint}(0)
   glGenBuffers(1, vbo)
@@ -76,18 +76,24 @@ function init_buffers(minute_buckets) #::Vector{Int64, Aggs.MinuteBucket})
   glGenBuffers(1, mbo)
   glBindBuffer(GL_ARRAY_BUFFER, mbo[])
   models = Float32[]
-  max_minute_volume = 1_000
-  for bucket in minute_buckets[1:10]
+
+  # Axes go 0-10
+  scale_x = 10f0 / length(minute_bucket_range.buckets)
+  scale_y = 10f0 / (minute_bucket_range.range_price.stop - minute_bucket_range.range_price.start)
+  scale_z = 10f0 / minute_bucket_range.max_volume
+  println(minute_bucket_range.range_price)
+  println(minute_bucket_range.max_volume)
+  for bucket in minute_bucket_range.buckets
     for (price, volume) in bucket.prices
-      transform = GL.translate(Float32(bucket.time * 2 / 1440), 25f0 - price, 0f0) *
-        GL.scale(0.5f0, 0.5f0, Float32(volume / max_minute_volume))
-      println((Float32(bucket.time * 2 / 1440), price / 25f0, 0f0))
+      transform = GL.translate(
+        -Float32((bucket.time - minute_bucket_range.buckets[1].time) * scale_x),
+        Float32((price - minute_bucket_range.range_price.start) * scale_y),
+        0f0
+       ) * GL.scale(scale_x, scale_x, scale_z * volume)
       append!(models, transform)
       global num_cubes += 1
     end
   end
-  println("num_cubes ", num_cubes)
-  println("num_cubes ", num_cubes)
   glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
   # Mat4s take 4 attribute arrays
   mbo_loc = glGetAttribLocation(program[], "model")
