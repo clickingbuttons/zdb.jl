@@ -2,6 +2,7 @@ module Cube
 
 using ModernGL
 include("./gl.jl")
+include("./aggs.jl")
 
 # Global variables needed for each render
 const program = Ref{GLuint}(0)
@@ -56,9 +57,9 @@ const indices = UInt32[
   3, 2, 6, 7, 4, 2, 0,
   3, 1, 6, 5, 4, 1, 0
 ]
-const num_cubes = 5
+num_cubes = 0
 
-function init_buffers()
+function init_buffers(minute_buckets) #::Vector{Int64, Aggs.MinuteBucket})
   # position
   vbo = Ref{GLuint}(0)
   glGenBuffers(1, vbo)
@@ -69,6 +70,34 @@ function init_buffers()
   glBindVertexArray(vao[])
   glEnableVertexAttribArray(0)
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Float32), C_NULL)
+
+  # model
+  mbo = Ref{GLuint}(0)
+  glGenBuffers(1, mbo)
+  glBindBuffer(GL_ARRAY_BUFFER, mbo[])
+  models = Float32[]
+  max_minute_volume = 1_000
+  for bucket in minute_buckets[1:10]
+    for (price, volume) in bucket.prices
+      transform = GL.translate(Float32(bucket.time * 2 / 1440), 25f0 - price, 0f0) *
+        GL.scale(0.5f0, 0.5f0, Float32(volume / max_minute_volume))
+      println((Float32(bucket.time * 2 / 1440), price / 25f0, 0f0))
+      append!(models, transform)
+      global num_cubes += 1
+    end
+  end
+  println("num_cubes ", num_cubes)
+  println("num_cubes ", num_cubes)
+  glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
+  # Mat4s take 4 attribute arrays
+  mbo_loc = glGetAttribLocation(program[], "model")
+  for i = 0:3
+    loc = mbo_loc + i
+    glEnableVertexAttribArray(loc)
+    offset = Ptr{Cvoid}(4 * i * sizeof(Float32))
+    glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(Float32), offset)
+    glVertexAttribDivisor(loc, 1)
+  end
 
   # color
   cbo = Ref{GLuint}(0)
@@ -83,25 +112,6 @@ function init_buffers()
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Float32), C_NULL)
   glVertexAttribDivisor(1, 1)
 
-  # model
-  mbo = Ref{GLuint}(0)
-  glGenBuffers(1, mbo)
-  glBindBuffer(GL_ARRAY_BUFFER, mbo[])
-  models = Float32[]
-  for i = 0:num_cubes-1
-    append!(models, GL.translate(Float32(i), 0f0, 0f0) * GL.scale(1f0, Float32(i + 1), 1f0))
-  end
-  glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
-  # Mat4s take 4 attribute arrays
-  mbo_loc = glGetAttribLocation(program[], "model")
-  for i = 0:3
-    loc = mbo_loc + i
-    glEnableVertexAttribArray(loc)
-    offset = Ptr{Cvoid}(4 * i * sizeof(Float32))
-    glVertexAttribPointer(loc, 4, GL_FLOAT, GL_FALSE, 4 * 4 * sizeof(Float32), offset)
-    glVertexAttribDivisor(loc, 1)
-  end
-
   # indices
   glGenBuffers(1, ebo)
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[])
@@ -109,9 +119,10 @@ function init_buffers()
 end
 
 function init()
+  minute_buckets = Aggs.minute_price_buckets("2004-01-09", "AAPL")
   init_program()
   uni_world[] = glGetUniformLocation(program[], "gWorld")
-  init_buffers()
+  init_buffers(minute_buckets)
 end
 
 function renderFrame(g_world::Matrix{Float32})

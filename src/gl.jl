@@ -93,9 +93,9 @@ end
 
 function translate(x::Float32, y::Float32, z::Float32)::Matrix{Float32}
   Float32[
-    1 0 0 x;
-    0 1 0 y;
-    0 0 1 z;
+    1 0 0 -x;
+    0 1 0 -y;
+    0 0 1 -z;
     0 0 0 1;
   ]
 end

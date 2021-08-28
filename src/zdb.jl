@@ -7,6 +7,7 @@ using Serialization
 
 BASE_URL = "http://localhost:7878"
 nanoseconds(x::DateTime)::Int64 = (Dates.value(x) - Dates.UNIXEPOCH) * 1_000_000
+nanoseconds(x::Date)::Int64 = (Dates.value(DateTime(x)) - Dates.UNIXEPOCH) * 1_000_000
 
 function symbols(table::String, column::String)::Vector{String}
   req = HTTP.request("GET", "$BASE_URL/symbols/$table/$column")
