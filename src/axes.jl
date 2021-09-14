@@ -1,7 +1,7 @@
 module Axes
 
 using ModernGL
-include("./gl.jl")
+using ..GL
 
 # Global variables needed for each render
 const program = Ref{GLuint}(0)

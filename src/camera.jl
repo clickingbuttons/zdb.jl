@@ -46,10 +46,13 @@ function handleInput(window::GLFW.Window, loop_time::Float64, cam::Cam, state::G
     cam.eye += cam.direction * cameraSpeed
   end
   if GLFW.GetKey(window, GLFW.KEY_A)
-    cam.eye -= cross(cam.direction, cam.up) * cameraSpeed
+    cam.eye -= cross(cam.direction, cam.up) * cameraSpeed * 2
   end
   if GLFW.GetKey(window, GLFW.KEY_D)
-    cam.eye += cross(cam.direction, cam.up) * cameraSpeed
+    cam.eye += cross(cam.direction, cam.up) * cameraSpeed * 2
+  end
+  if GLFW.GetKey(window, GLFW.KEY_SPACE)
+    cam.eye -= cam.up * cameraSpeed
   end
 
   (xoff, yoff) = GLFW.GetCursorPos(window)

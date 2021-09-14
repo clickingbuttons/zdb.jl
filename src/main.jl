@@ -5,10 +5,18 @@ using LinearAlgebra
 using InteractiveUtils
 
 include("./window.jl")
+using .Window
 include("./gl.jl")
+using .GL
 include("./camera.jl")
+using .Camera
 include("./axes.jl")
+using .Axes
+include("./scan.jl")
+include("./zdb.jl")
+include("./aggs.jl")
 include("./cube.jl")
+using .Cube
 
 function renderFrame(window::GLFW.Window)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
