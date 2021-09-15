@@ -25,11 +25,7 @@ function renderFrame(window::GLFW.Window)
   rads = Float32(t % (2 * pi))
   # projection * view * model
   g_world = GL.perspective_project(window) *
-    GL.look_at(Camera.main.eye, Camera.main.direction, Camera.main.up) 
-    #GL.translate(0f0, 0f0, 0f0) *
-    #GL.rotateX(rads) *
-    #GL.rotateY(rads) *
-    #GL.scale(0.5f0, 0.5f0, 0.5f0)
+    GL.look_at(Camera.main.eye, Camera.main.direction, Camera.main.up)
   Axes.renderFrame(g_world)
   Cube.renderFrame(g_world)
 end
@@ -39,6 +35,7 @@ function main()
   GL.initDebug()
   Axes.init()
   Cube.init()
+  Cube.init_graph("2004-01-02", "AAPL")
 
   glClearColor(0.2, 0.3, 0.3, 1.0)
   glEnable(GL_DEPTH_TEST)

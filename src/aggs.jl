@@ -4,13 +4,15 @@ using Dates
 using ..zdb
 using ..Scan
 
+const agg1d_table = "agg1d"
 const trades_table = "trades2"
 const DATE_FORMAT = "yyyy-mm-dd"
+agg1d_syms = zdb.symbols(agg1d_table, "sym")
+trade_syms = zdb.symbols(trades_table, "sym")
 
 function trade_volume(date::String, symbol::String)::Vector{Scan.Trade}
-  syms = zdb.symbols(trades_table, "sym")
   # Julia starts indexing at 1, zdb does for symbols at 0
-  sym_index = findfirst(s -> s == symbol, syms) - 1
+  sym_index = findfirst(s -> s == symbol, trade_syms) - 1
 
   date = Date(date, DATE_FORMAT)
   next_day = date + Dates.Day(1)
@@ -41,6 +43,37 @@ function trade_volume(date::String, symbol::String)::Vector{Scan.Trade}
   """)
 end
 
+function ohlcv(date::String, symbol::String)::Scan.OHLCV
+  sym_index = findfirst(s -> s == symbol, agg1d_syms) - 1
+
+  date = Date(date, DATE_FORMAT)
+  next_day = date + Dates.Day(1)
+  zdb.query(agg1d_table, string(date), string(date), """
+  struct OHLCV
+    open::Float32
+    high::Float32
+    low::Float32
+    close::Float32
+    volume::UInt64
+  end
+
+  function scan(
+    sym::Vector{UInt16},
+    open::Vector{Float32},
+    high::Vector{Float32},
+    low::Vector{Float32},
+    close::Vector{Float32},
+    volume::Vector{UInt64}
+  )::OHLCV
+    for (index, (sy, o, h, l, c, v)) in enumerate(zip(sym, open, high, low, close, volume))
+      if sy == $(sym_index)
+        return OHLCV(o, h, l, c, v)
+      end
+    end
+  end
+  """)
+end
+
 struct MinuteBucket
   time::Int64
   prices::Dict{Float32, UInt32}
@@ -61,6 +94,8 @@ function minute_price_buckets(date::String, symbol::String)::MinuteBucketRange
   date_nanos = DateTime(date, DATE_FORMAT)
   date_nanos = zdb.nanoseconds(date_nanos)
   trades = trade_volume(date, symbol)
+  candle = ohlcv(date, symbol)
+  println(candle)
   timestamps = map(t -> t.ts, trades)
   buckets = MinuteBucket[]
   bucket = MinuteBucket(0, Dict())
@@ -68,6 +103,11 @@ function minute_price_buckets(date::String, symbol::String)::MinuteBucketRange
   max_volume = UInt64(0)
 
   for t in trades
+    # Cheat for now and use OHLCV until we store errors
+    if t.price < candle.low || t.price > candle.high
+      println("bad trade $(t)")
+      continue
+    end
     minute = round(Int64, (t.ts - date_nanos) / (60 * 1_000_000_000))
     if minute != bucket.time
       bucket = MinuteBucket(minute, Dict())

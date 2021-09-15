@@ -1,6 +1,7 @@
 module Cube
 
 using ModernGL
+import ModernGL: @glfunc, GLFunc, getprocaddress_e
 using ..Aggs
 using ..GL
 
@@ -57,9 +58,50 @@ const indices = UInt32[
   3, 2, 6, 7, 4, 2, 0,
   3, 1, 6, 5, 4, 1, 0
 ]
+const max_num_cubes = 100_000
+const GL_MAP_PERSISTENT_BIT = 0x0040
+const GL_MAP_COHERENT_BIT = 0x0080
+@glfunc glBufferStorage(target::GLenum, size::GLsizei, data::Ptr{Cvoid}, flags::GLbitfield)::Cvoid
 num_cubes = 0
+models = Float32[]
+colors = Float32[]
 
-function init_buffers(minute_bucket_range)
+function init_buffers(minute_bucket_range::Aggs.MinuteBucketRange)
+  # Axes go -10,10
+  scale_x = Float32(10 / (last(minute_bucket_range.buckets).time - first(minute_bucket_range.buckets).time))
+  price_range = minute_bucket_range.range_price.stop - minute_bucket_range.range_price.start
+  scale_y = Float32(10 / price_range)
+  scale_yy = Float32(1f-3 / price_range / 2)
+  scale_z = Float32(10 / minute_bucket_range.max_volume)
+  i = 1
+  for bucket in minute_bucket_range.buckets
+    for (price, volume) in bucket.prices
+      transform = GL.translate(
+        -Float32((bucket.time - minute_bucket_range.buckets[1].time) * scale_x),
+        Float32((price - minute_bucket_range.range_price.start) * scale_y),
+        -scale_z * volume / 2
+       ) * GL.scale(scale_x / 2, scale_yy, scale_z * volume / 2)
+      for v in transform
+        global models[i] = v
+        i += 1
+      end
+      global num_cubes += 1
+    end
+  end
+
+  #glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
+  # color
+  for i = 1:num_cubes
+    colors[i * 3] = 1f0
+    colors[i * 3 + 1] = 1f0
+    colors[i * 3 + 2] = 1f0
+  end
+  #glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW)
+end
+
+function init()
+  init_program()
+  uni_world[] = glGetUniformLocation(program[], "gWorld")
   # position
   vbo = Ref{GLuint}(0)
   glGenBuffers(1, vbo)
@@ -75,28 +117,12 @@ function init_buffers(minute_bucket_range)
   mbo = Ref{GLuint}(0)
   glGenBuffers(1, mbo)
   glBindBuffer(GL_ARRAY_BUFFER, mbo[])
-  models = Float32[]
-
-  # Axes go -10,10
-  scale_x = Float32(10 / (last(minute_bucket_range.buckets).time - first(minute_bucket_range.buckets).time))
-  price_range = minute_bucket_range.range_price.stop - minute_bucket_range.range_price.start
-  scale_y = Float32(10 / price_range)
-  scale_yy = Float32(1f-3 / price_range / 2)
-  scale_z = Float32(10 / minute_bucket_range.max_volume)
-  println([scale_x, scale_y, scale_z])
-  println([minute_bucket_range.range_price.stop, minute_bucket_range.range_price.start])
-  for bucket in minute_bucket_range.buckets
-    for (price, volume) in bucket.prices
-      transform = GL.translate(
-        -Float32((bucket.time - minute_bucket_range.buckets[1].time) * scale_x),
-        Float32((price - minute_bucket_range.range_price.start) * scale_y),
-        -scale_z * volume / 2
-       ) * GL.scale(scale_x / 2, scale_yy, scale_z * volume / 2)
-      append!(models, transform)
-      global num_cubes += 1
-    end
-  end
-  glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
+  flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT
+  max_num_floats = max_num_cubes * 16
+  # https://ferransole.wordpress.com/2014/06/08/persistent-mapped-buffers/
+  glBufferStorage(GL_ARRAY_BUFFER, max_num_floats * 4, C_NULL, flags)
+  modelPtr = convert(Ptr{Float32}, glMapBufferRange(GL_ARRAY_BUFFER, C_NULL, max_num_floats * 4, flags))
+  global models = unsafe_wrap(Array, modelPtr, (max_num_floats,))
   # Mat4s take 4 attribute arrays
   mbo_loc = glGetAttribLocation(program[], "model")
   for i = 0:3
@@ -111,14 +137,13 @@ function init_buffers(minute_bucket_range)
   cbo = Ref{GLuint}(0)
   glGenBuffers(1, cbo)
   glBindBuffer(GL_ARRAY_BUFFER, cbo[])
-  colors = Float32[]
-  for i = 1:num_cubes
-    append!(colors, Float32[1, 1, 1])
-  end
-  glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW)
   glEnableVertexAttribArray(1)
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(Float32), C_NULL)
   glVertexAttribDivisor(1, 1)
+  max_num_floats = max_num_cubes * 3
+  glBufferStorage(GL_ARRAY_BUFFER, max_num_floats * 4, C_NULL, flags)
+  colorPtr = convert(Ptr{Float32}, glMapBufferRange(GL_ARRAY_BUFFER, C_NULL, max_num_floats * 4, flags))
+  global colors = unsafe_wrap(Array, colorPtr, (max_num_floats,))
 
   # indices
   glGenBuffers(1, ebo)
@@ -126,10 +151,9 @@ function init_buffers(minute_bucket_range)
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW)
 end
 
-function init()
-  minute_buckets = Aggs.minute_price_buckets("2004-01-05", "SPY")
-  init_program()
-  uni_world[] = glGetUniformLocation(program[], "gWorld")
+function init_graph(day::String, symbol::String)
+  global num_cubes = 0
+  minute_buckets = Aggs.minute_price_buckets(day, symbol)
   init_buffers(minute_buckets)
 end
 
