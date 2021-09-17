@@ -35,7 +35,7 @@ function main()
   GL.initDebug()
   Axes.init()
   Cube.init()
-  Cube.init_graph("2004-01-02", "AAPL")
+  Cube.write_graph("2004-01-02", "SPY")
 
   glClearColor(0.2, 0.3, 0.3, 1.0)
   glEnable(GL_DEPTH_TEST)

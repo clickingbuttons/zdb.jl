@@ -74,7 +74,7 @@ function ohlcv(date::String, symbol::String)::Scan.OHLCV
   """)
 end
 
-struct MinuteBucket
+struct Bucket
   time::Int64
   prices::Dict{Float32, UInt32}
 end
@@ -85,9 +85,10 @@ mutable struct Range
 end
 
 struct MinuteBucketRange
-  buckets::Vector{MinuteBucket}
+  buckets::Vector{Bucket}
   range_price::Range
   max_volume::UInt64
+  min_price_distance::Float32
 end
 
 function minute_price_buckets(date::String, symbol::String)::MinuteBucketRange
@@ -97,23 +98,23 @@ function minute_price_buckets(date::String, symbol::String)::MinuteBucketRange
   candle = ohlcv(date, symbol)
   println(candle)
   timestamps = map(t -> t.ts, trades)
-  buckets = MinuteBucket[]
-  bucket = MinuteBucket(0, Dict())
+  buckets = Bucket[]
+  bucket = Bucket(0, Dict())
   range_price = Range(trades[1].price, trades[1].price)
   max_volume = UInt64(0)
+  min_price_distance = typemax(Float32)
 
-  for t in trades
+  for (i, t) in enumerate(trades)
     # Cheat for now and use OHLCV until we store errors
     if t.price < candle.low || t.price > candle.high
-      println("bad trade $(t)")
       continue
     end
     minute = round(Int64, (t.ts - date_nanos) / (60 * 1_000_000_000))
     if minute != bucket.time
-      bucket = MinuteBucket(minute, Dict())
+      bucket = Bucket(minute, Dict())
       push!(buckets, bucket)
     end
-    bucket.prices[t.price] = get(bucket.prices, minute, 0)
+    bucket.prices[t.price] = get(bucket.prices, t.price, 0)
     bucket.prices[t.price] += t.size
     if t.price < range_price.start
       range_price.start = t.price
@@ -123,12 +124,19 @@ function minute_price_buckets(date::String, symbol::String)::MinuteBucketRange
     if bucket.prices[t.price] > max_volume
       max_volume = bucket.prices[t.price]
     end
+    if i > 2
+      price_distance = abs(t.price - trades[i - 1].price)
+      if price_distance > 0f0 && price_distance < min_price_distance
+        min_price_distance = price_distance
+      end
+    end
   end
 
   MinuteBucketRange(
     buckets,
     range_price,
-    max_volume
+    max_volume,
+    min_price_distance
   )
 end
 

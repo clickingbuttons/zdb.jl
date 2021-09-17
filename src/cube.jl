@@ -1,5 +1,6 @@
 module Cube
 
+using Random
 using ModernGL
 import ModernGL: @glfunc, GLFunc, getprocaddress_e
 using ..Aggs
@@ -58,7 +59,7 @@ const indices = UInt32[
   3, 2, 6, 7, 4, 2, 0,
   3, 1, 6, 5, 4, 1, 0
 ]
-const max_num_cubes = 100_000
+const max_num_cubes = 1_000_000
 const GL_MAP_PERSISTENT_BIT = 0x0040
 const GL_MAP_COHERENT_BIT = 0x0080
 @glfunc glBufferStorage(target::GLenum, size::GLsizei, data::Ptr{Cvoid}, flags::GLbitfield)::Cvoid
@@ -66,12 +67,12 @@ num_cubes = 0
 models = Float32[]
 colors = Float32[]
 
-function init_buffers(minute_bucket_range::Aggs.MinuteBucketRange)
-  # Axes go -10,10
+function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
+  # Axes go 0,10
   scale_x = Float32(10 / (last(minute_bucket_range.buckets).time - first(minute_bucket_range.buckets).time))
   price_range = minute_bucket_range.range_price.stop - minute_bucket_range.range_price.start
   scale_y = Float32(10 / price_range)
-  scale_yy = Float32(1f-3 / price_range / 2)
+  scale_yy = Float32(5 / (price_range / minute_bucket_range.min_price_distance))
   scale_z = Float32(10 / minute_bucket_range.max_volume)
   i = 1
   for bucket in minute_bucket_range.buckets
@@ -91,12 +92,14 @@ function init_buffers(minute_bucket_range::Aggs.MinuteBucketRange)
 
   #glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
   # color
-  for i = 1:num_cubes
-    colors[i * 3] = 1f0
-    colors[i * 3 + 1] = 1f0
-    colors[i * 3 + 2] = 1f0
+  Random.seed!(1234)
+  for i = 0:num_cubes - 1
+    colors[i * 3 + 1] = rand(Float32)
+    colors[i * 3 + 2] = rand(Float32)
+    colors[i * 3 + 3] = rand(Float32)
   end
   #glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW)
+  println("num_cubes $(num_cubes)")
 end
 
 function init()
@@ -151,10 +154,10 @@ function init()
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW)
 end
 
-function init_graph(day::String, symbol::String)
+function write_graph(day::String, symbol::String)
   global num_cubes = 0
   minute_buckets = Aggs.minute_price_buckets(day, symbol)
-  init_buffers(minute_buckets)
+  write_cubes(minute_buckets)
 end
 
 function renderFrame(g_world::Matrix{Float32})
