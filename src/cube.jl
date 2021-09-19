@@ -5,6 +5,7 @@ using ModernGL
 import ModernGL: @glfunc, GLFunc, getprocaddress_e
 using ..Aggs
 using ..GL
+using ..Axes
 
 # Global variables needed for each render
 const program = Ref{GLuint}(0)
@@ -68,12 +69,11 @@ models = Float32[]
 colors = Float32[]
 
 function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
-  # Axes go 0,10
-  scale_x = Float32(10 / (last(minute_bucket_range.buckets).time - first(minute_bucket_range.buckets).time))
+  scale_x = Float32(Axes.x / (last(minute_bucket_range.buckets).time - first(minute_bucket_range.buckets).time))
   price_range = minute_bucket_range.range_price.stop - minute_bucket_range.range_price.start
-  scale_y = Float32(10 / price_range)
-  scale_yy = Float32(5 / (price_range / minute_bucket_range.min_price_distance))
-  scale_z = Float32(10 / minute_bucket_range.max_volume)
+  scale_y = Float32(Axes.y / price_range)
+  scale_yy = Float32(Axes.y / 2 / (price_range / minute_bucket_range.min_price_distance))
+  scale_z = Float32(Axes.z / minute_bucket_range.max_volume)
   i = 1
   for bucket in minute_bucket_range.buckets
     for (price, volume) in bucket.prices

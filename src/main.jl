@@ -33,7 +33,7 @@ end
 function main()
   window = Window.createWindow()
   GL.initDebug()
-  Axes.init()
+  Axes.init(window)
   Cube.init()
   Cube.write_graph("2004-01-02", "SPY")
 

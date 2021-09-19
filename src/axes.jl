@@ -1,5 +1,6 @@
 module Axes
 
+using GLFW
 using ModernGL
 using ..GL
 
@@ -41,19 +42,26 @@ function init_program()
   glLinkProgram(program[])
 end
 
-const vertices = Float32[
-  # pos      ,  color
-  # x
-    0,  0,  0,  1, 0, 0,
-   10,  0,  0,  1, 0, 0,
-  # y
-   0,   0,  0,  0, 1, 0,
-   0, -10,  0,  0, 1, 0,
-  # z
-   0,  0,   0,  0, 0, 1,
-   0,  0,  10,  0, 0, 1,
-]
-function init_buffers()
+vertices = Float32[]
+x = 10f0
+y = 10f0
+z = 10f0
+function init_buffers(window::GLFW.Window)
+  (width, height) = GLFW.GetWindowSize(window)
+  ratio = width / height
+  global x *= ratio
+  global vertices = Float32[
+    # pos  ,  color
+    # x
+    0,  0, 0,  1, 0, 0,
+    x,  0, 0,  1, 0, 0,
+    # y
+    0,  0, 0,  0, 1, 0,
+    0, -y, 0,  0, 1, 0,
+    # z
+    0,  0, 0,  0, 0, 1,
+    0,  0, z,  0, 0, 1,
+  ]
   glGenBuffers(1, vbo)
   glBindBuffer(GL_ARRAY_BUFFER, vbo[])
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW)
@@ -67,10 +75,10 @@ function init_buffers()
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(Float32), offset)
 end
 
-function init()
+function init(window::GLFW.Window)
   init_program()
   uni_world[] = glGetUniformLocation(program[], "gWorld")
-  init_buffers()
+  init_buffers(window)
 end
 
 function renderFrame(g_world::Matrix{Float32})
