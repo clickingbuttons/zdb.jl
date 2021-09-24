@@ -22,9 +22,9 @@ function createWindow()
   @info "Renderder: $(unsafe_string(glGetString(GL_RENDERER)))"
   @info "OpenGL version supported: $(unsafe_string(glGetString(GL_VERSION)))"
 
-  GLFW.SetCharModsCallback(window, (window, char, mods) -> begin
+  GLFW.SetKeyCallback(window, (window, key, scancode, actions, mods) -> begin
     #println("char: $char, mods: $mods")
-    foreach(cb -> cb(window, char, mods), key_callbacks)
+    foreach(cb -> cb(window, key, scancode, actions, mods), key_callbacks)
   end)
   GLFW.SetMouseButtonCallback(window, (window, button, action, mods) -> begin
     #println("$button $action")

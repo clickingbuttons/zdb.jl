@@ -11,7 +11,7 @@ mutable struct Cam
   yaw::Float32
 end
 
-main = Cam(
+const default_cam = Cam(
   [-9.0883465, 0.058669634, -12.42536],
   [0.010188671, -0.37270314, -0.9278947],
   [0.0, 0.0, 1.0],
@@ -19,6 +19,8 @@ main = Cam(
   -9.452108f0
 )
 
+main = deepcopy(default_cam)
+# For all cameras
 mutable struct GlobalCamState
   mouse2_down::Bool
   last_x::Float64
@@ -31,7 +33,18 @@ state = GlobalCamState(
   0.0
 )
 
-function handleInput(window::GLFW.Window, loop_time::Float64, cam::Cam, state::GlobalCamState)
+function key_callback(_window, key, _scancode, action, mods)
+  if key == GLFW.KEY_R && action == GLFW.RELEASE
+    global main = deepcopy(default_cam)
+    global state = GlobalCamState(
+      false,
+      0.0,
+      0.0
+    )
+  end
+end
+
+function handleInput(window::GLFW.Window, loop_time::Float64, cam::Cam)
   mouse2_down_check = GLFW.GetMouseButton(window, GLFW.MOUSE_BUTTON_2)
 
   cameraSpeed = Float32(loop_time * 3)

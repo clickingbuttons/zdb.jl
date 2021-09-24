@@ -2,6 +2,7 @@ module Cube
 
 using Random
 using ModernGL
+using GLFW
 import ModernGL: @glfunc, GLFunc, getprocaddress_e
 using ..Aggs
 using ..GL
@@ -12,6 +13,10 @@ const program = Ref{GLuint}(0)
 const ebo = Ref{GLuint}(0)
 const vao = Ref{GLuint}(0)
 const uni_world = Ref{GLint}(0)
+
+symbol = ""
+minute_bucket_ranges = Dict{String, Aggs.MinuteBucketRange}()
+minute_bucket_keys = String[]
 
 function init_program()
   vertex_shader = glCreateShader(GL_VERTEX_SHADER)
@@ -69,6 +74,7 @@ models = Float32[]
 colors = Float32[]
 
 function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
+  global num_cubes = 0
   scale_x = Float32(Axes.x / (last(minute_bucket_range.buckets).time - first(minute_bucket_range.buckets).time))
   price_range = minute_bucket_range.range_price.stop - minute_bucket_range.range_price.start
   scale_y = Float32(Axes.y / price_range)
@@ -102,7 +108,7 @@ function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
   println("num_cubes $(num_cubes)")
 end
 
-function init()
+function init(window::GLFW.Window)
   init_program()
   uni_world[] = glGetUniformLocation(program[], "gWorld")
   # position
@@ -154,18 +160,47 @@ function init()
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW)
 end
 
-function write_graph(day::String, symbol::String)
-  global num_cubes = 0
-  minute_buckets = Aggs.minute_price_buckets(day, symbol)
-  write_cubes(minute_buckets)
-end
-
 function renderFrame(g_world::Matrix{Float32})
   glUseProgram(program[])
   glBindVertexArray(vao[])
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo[])
   glUniformMatrix4fv(uni_world[], 1, GL_FALSE, pointer(g_world))
   glDrawElementsInstanced(GL_TRIANGLE_STRIP, length(indices), GL_UNSIGNED_INT, C_NULL, num_cubes)
+end
+
+function key_callback(_window, key, _scancode, action, mods)
+  if key == GLFW.KEY_N && action == GLFW.RELEASE
+    num_symbols = length(minute_bucket_keys)
+    symbol_index = findfirst(s -> s == symbol, minute_bucket_keys)
+    if mods == GLFW.MOD_SHIFT
+      symbol_index -= 1
+      if symbol_index < 1
+        println("start")
+        symbol_index = num_symbols
+      end
+    else
+      symbol_index += 1
+      if symbol_index > num_symbols
+        println("end")
+        symbol_index = 1
+      end
+    end
+    global symbol = minute_bucket_keys[symbol_index]
+    println(symbol_index, " ", symbol)
+    write_cubes(minute_bucket_ranges[symbol])
+  end
+end
+
+function loadDate(date::String)
+  global minute_bucket_ranges = Aggs.get_minute_bucket_ranges(date)
+  global minute_bucket_keys = collect(keys(minute_bucket_ranges))
+  global symbol = first(minute_bucket_keys)
+  write_cubes(minute_bucket_ranges[symbol])
+end
+
+function loadSymbol(sym::String)
+  global symbol = sym
+  write_cubes(minute_bucket_ranges[symbol])
 end
 
 end

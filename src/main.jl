@@ -15,6 +15,7 @@ using .Axes
 include("./scan.jl")
 include("./zdb.jl")
 include("./aggs.jl")
+using .Aggs
 include("./cube.jl")
 using .Cube
 
@@ -31,11 +32,14 @@ function renderFrame(window::GLFW.Window)
 end
 
 function main()
+  push!(Window.key_callbacks, Camera.key_callback)
+  push!(Window.key_callbacks, Cube.key_callback)
   window = Window.createWindow()
   GL.initDebug()
   Axes.init(window)
-  Cube.init()
-  Cube.write_graph("2004-01-02", "SPY")
+  Cube.init(window)
+  Cube.loadDate("2004-01-02")
+  Cube.loadSymbol("AAPL")
 
   glClearColor(0.2, 0.3, 0.3, 1.0)
   glEnable(GL_DEPTH_TEST)
@@ -45,7 +49,7 @@ function main()
   loop_time = 0.0
   loop_time0 = time()
   while !GLFW.WindowShouldClose(window)
-    Camera.handleInput(window, loop_time, Camera.main, Camera.state)
+    Camera.handleInput(window, loop_time, Camera.main)
 
     renderFrame(window)
     GLFW.SwapBuffers(window)
