@@ -102,11 +102,20 @@ function aggregate_trades(
   agg1ds::Dict{String, Scan.OHLCV},
   trades::Vector{Scan.TradeAgg},
   date::String
-)::Dict{String, MinuteBucketRange}
+)::Vector{MinuteBucketRange}
   date_nanos = DateTime(date, DATE_FORMAT)
   date_nanos = zdb.nanoseconds(date_nanos)
 
-  res = Dict{String, MinuteBucketRange}()
+  res = fill(
+    MinuteBucketRange(
+      fill(Dict{Float32, UInt32}(), 24 * 60),
+      Range(typemax(Float32), typemin(Float32)),
+      0,
+      100f0 # BK.A
+    ),
+    length(trade_syms)
+  )
+
   sym_prices = Dict{String, Vector{Float32}}()
   # sparse matrix that appears like it does on graph
   # ^
@@ -123,14 +132,7 @@ function aggregate_trades(
     if t.price < agg1d.low || t.price > agg1d.high
       continue
     end
-    minute_bucket_range = get!(res, sym) do
-      MinuteBucketRange(
-        fill(Dict{Float32, UInt32}(), 24 * 60),
-        Range(t.price, t.price),
-        0,
-        100f0 # BK.A
-      )
-    end
+    minute_bucket_range = res[trade_agg.sym + 1]
     minute = round(Int64, (t.ts - date_nanos) / (60 * 1_000_000_000))
 
     # Add volume
