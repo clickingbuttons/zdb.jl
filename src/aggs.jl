@@ -14,7 +14,7 @@ mutable struct Range
 end
 
 mutable struct MinuteBucketRange
-  volumes::SparseMatrixCSC{UInt32, Int32}
+  buckets::Vector{Dict{Float32, UInt32}}
   range_price::Range
   max_volume::UInt64
   min_price_distance::Float32
@@ -88,6 +88,7 @@ function get_trades(date::String)::Vector{Scan.TradeAgg}
     price::Vector{Float32},
     conditions::Vector{UInt32}
   )::Vector{TradeAgg}
+    #prices = map(p -> round(Int64, p*1f6), price)
     for (index, (t, sy, si, p, c)) in enumerate(zip(ts, sym, size, price, conditions))
       push!(trades, TradeAgg(sy, Trade(t, si, p, c)))
     end
@@ -107,7 +108,6 @@ function aggregate_trades(
 
   res = Dict{String, MinuteBucketRange}()
   sym_prices = Dict{String, Vector{Float32}}()
-  println(first(trades), date_nanos)
   # sparse matrix that appears like it does on graph
   # ^
   # |
@@ -125,21 +125,23 @@ function aggregate_trades(
     end
     minute_bucket_range = get!(res, sym) do
       MinuteBucketRange(
-        SparseMatrixCSC{UInt32, Int64},
+        fill(Dict{Float32, UInt32}(), 24 * 60),
         Range(t.price, t.price),
         0,
-        typemax(Float32)
+        100f0 # BK.A
       )
     end
     minute = round(Int64, (t.ts - date_nanos) / (60 * 1_000_000_000))
-    buckets = minute_bucket_range.buckets
-    if !isdefined(buckets, minute)
-      buckets[minute] = Dict{Float32, UInt32}()
-    end
+
     # Add volume
-    minute_bucket_range.volumes[minute, t.price] += t.size
+    buckets = minute_bucket_range.buckets[minute]
+    if !haskey(buckets, t.price)
+      buckets[t.price] = 0
+    end
+    buckets[t.price] += t.size
+
     # Check volume range
-    new_volume = minute_bucket_range.volumes[minute, t.price]
+    new_volume = buckets[t.price]
     if new_volume > minute_bucket_range.max_volume
       minute_bucket_range.max_volume = new_volume
     end
@@ -152,7 +154,6 @@ function aggregate_trades(
     end
   end
   println("bucketed trades")
-
   #=
   for (symbol, prices) in sym_prices
     prices = sort(prices)
