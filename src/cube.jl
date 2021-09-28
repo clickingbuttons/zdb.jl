@@ -75,19 +75,22 @@ colors = Float32[]
 
 function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
   global num_cubes = 0
-  scale_x = Float32(Axes.x / (last(minute_bucket_range.buckets).time - first(minute_bucket_range.buckets).time))
-  price_range = minute_bucket_range.range_price.stop - minute_bucket_range.range_price.start
+  minutes = collect(keys(minute_bucket_range.minutes))
+  min_minute = minimum(minutes)
+  max_minute = maximum(minutes)
+  scale_x = Float32(Axes.x / (max_minute - min_minute))
+  price_range = minute_bucket_range.range_price.max - minute_bucket_range.range_price.min
   scale_y = Float32(Axes.y / price_range)
   scale_yy = Float32(Axes.y / 2 / (price_range / minute_bucket_range.min_price_distance))
   scale_z = Float32(Axes.z / minute_bucket_range.max_volume)
   i = 1
-  for bucket in minute_bucket_range.buckets
-    for (price, volume) in bucket.prices
+  for (minute, volumes) in minute_bucket_range.minutes
+    for (price, volume) in volumes
       transform = GL.translate(
-        -Float32((bucket.time - minute_bucket_range.buckets[1].time) * scale_x),
-        Float32((price - minute_bucket_range.range_price.start) * scale_y),
-        -scale_z * volume / 2
-       ) * GL.scale(scale_x / 2, scale_yy, scale_z * volume / 2)
+          -Float32((minute - min_minute) * scale_x),
+          Float32((price - minute_bucket_range.range_price.min) * scale_y),
+          -scale_z * volume / 2
+        ) * GL.scale(scale_x / 2, scale_yy, scale_z * volume / 2)
       for v in transform
         global models[i] = v
         i += 1
@@ -194,7 +197,9 @@ end
 function loadDate(date::String)
   global minute_bucket_ranges = Aggs.get_minute_bucket_ranges(date)
   global minute_bucket_keys = collect(keys(minute_bucket_ranges))
-  global symbol = first(minute_bucket_keys)
+  if !haskey(minute_bucket_ranges, symbol)
+    global symbol = first(minute_bucket_keys)
+  end
   write_cubes(minute_bucket_ranges[symbol])
 end
 
