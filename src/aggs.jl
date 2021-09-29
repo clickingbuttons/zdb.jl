@@ -13,8 +13,20 @@ mutable struct Range
   max::Float32
 end
 
+@enum Direction begin
+  UP
+  DOWN
+  LEVEL
+end
+
+mutable struct PriceBucket
+  trades::Vector{Scan.Trade}
+  upticks::Vector{Direction}
+  volume::UInt32
+end
+
 mutable struct MinuteBucketRange
-  minutes::Dict{Int64, Dict{Float32, UInt32}}
+  minutes::Dict{Int64, Dict{Float32, PriceBucket}}
   range_price::Range
   max_volume::UInt32
   min_price_distance::Float32
@@ -122,16 +134,17 @@ function aggregate_trades(
 
     # Add volume
     # println("$sym $p_i64 $minute")
-    volumes = get!(minute_bucket_range.minutes, minute) do
-      Dict{Float32, UInt32}()
+    prices = get!(minute_bucket_range.minutes, minute) do
+      Dict{Float32, PriceBucket}()
     end
-    if !haskey(volumes, t.price)
-      volumes[t.price] = 0
+    if !haskey(prices, t.price)
+      prices[t.price] = PriceBucket(Scan.Trade[], Direction[], 0)
     end
-    volumes[t.price] += t.size
+    prices[t.price].volume += t.size
+    push!(prices[t.price].trades, t)
 
     # Check volume range
-    new_volume = volumes[t.price]
+    new_volume = prices[t.price].volume
     if new_volume > minute_bucket_range.max_volume
       minute_bucket_range.max_volume = new_volume
     end
@@ -148,6 +161,15 @@ function aggregate_trades(
       if distance < minute_bucket_range.min_price_distance
         minute_bucket_range.min_price_distance = distance
       end
+      direction = LEVEL
+      if t.price > minute_bucket_range.last_price
+        direction = UP
+      elseif t.price < minute_bucket_range.last_price
+        direction = DOWN
+      end
+      push!(prices[t.price].upticks, direction)
+    else
+      push!(prices[t.price].upticks, LEVEL)
     end
     minute_bucket_range.last_price = t.price
   end
@@ -160,7 +182,7 @@ function get_minute_bucket_ranges(date::String)::Dict{String, MinuteBucketRange}
   agg1ds = get_agg1ds(date) # TODO: Remove for proper condition checking
   trades = get_trades(date)
 
-  aggregate_trades(agg1ds, trades, date)
+  @timev aggregate_trades(agg1ds, trades, date)
 end
 
 end

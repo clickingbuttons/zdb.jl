@@ -85,28 +85,65 @@ function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
   scale_z = Float32(Axes.z / minute_bucket_range.max_volume)
   i = 1
   for (minute, volumes) in minute_bucket_range.minutes
-    for (price, volume) in volumes
-      transform = GL.translate(
-          -Float32((minute - min_minute) * scale_x),
-          Float32((price - minute_bucket_range.range_price.min) * scale_y),
-          -scale_z * volume / 2
-        ) * GL.scale(scale_x / 2, scale_yy, scale_z * volume / 2)
-      for v in transform
-        global models[i] = v
-        i += 1
+    for (price, price_bucket) in volumes
+      offset_z = 0f0
+      tick_num = 0
+      tick_type = Aggs.LEVEL
+      for (trade, uptick) in zip(price_bucket.trades, price_bucket.upticks)
+        height = Float32(scale_z * trade.size / 2)
+        transform = GL.translate(
+            -Float32((minute - min_minute) * scale_x),
+            Float32((price - minute_bucket_range.range_price.min) * scale_y),
+            -height - offset_z
+          ) * GL.scale(scale_x / 2, scale_yy, height)
+        for v in transform
+          global models[i] = v
+          i += 1
+        end
+        offset_z += height * 2
+
+        # color
+        red = 1f0
+        green = 1f0
+        blue = 1f0
+        if uptick == Aggs.UP
+          red = Float32((30 - tick_num / 10) / 255)
+          green = Float32((105 + tick_num * 10) / 255)
+          blue = Float32((30 - tick_num / 10) / 255)
+          if tick_type == Aggs.UP && tick_num < 255
+            tick_num += 1
+          else
+            tick_num = 0
+          end
+        elseif uptick == Aggs.DOWN
+          red = Float32((105 + tick_num * 10) / 255)
+          green = Float32((30 - tick_num / 10) / 255)
+          blue = Float32((30 - tick_num / 10) / 255)
+          if tick_type == Aggs.DOWN && tick_num < 255
+            tick_num += 1
+          else
+            tick_num = 0
+          end
+        else
+          red = Float32((105 + tick_num * 10) / 255)
+          green = Float32((105 + tick_num * 10) / 255)
+          blue = Float32((105 + tick_num * 10) / 255)
+          if tick_type == Aggs.LEVEL && tick_num < 255
+            tick_num += 1
+          else
+            tick_num = 0
+          end
+        end
+        colors[num_cubes * 3 + 1] = red
+        colors[num_cubes * 3 + 2] = green
+        colors[num_cubes * 3 + 3] = blue
+
+        global num_cubes += 1
       end
-      global num_cubes += 1
     end
   end
 
   #glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
-  # color
-  Random.seed!(1234)
-  for i = 0:num_cubes - 1
-    colors[i * 3 + 1] = rand(Float32)
-    colors[i * 3 + 2] = rand(Float32)
-    colors[i * 3 + 3] = rand(Float32)
-  end
   #glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW)
   println("num_cubes $(num_cubes)")
 end
