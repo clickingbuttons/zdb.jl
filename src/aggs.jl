@@ -2,7 +2,6 @@ module Aggs
 
 using Dates
 using ..zdb
-using ..Scan
 
 const agg1d_table = "agg1d"
 const trades_table = "trades2"
@@ -16,7 +15,7 @@ end
 @enum Direction begin
   UP
   DOWN
-  LEVEL
+  FLAT
 end
 
 mutable struct PriceBucket
@@ -161,7 +160,7 @@ function aggregate_trades(
       if distance < minute_bucket_range.min_price_distance
         minute_bucket_range.min_price_distance = distance
       end
-      direction = LEVEL
+      direction = FLAT
       if t.price > minute_bucket_range.last_price
         direction = UP
       elseif t.price < minute_bucket_range.last_price
@@ -169,7 +168,7 @@ function aggregate_trades(
       end
       push!(prices[t.price].upticks, direction)
     else
-      push!(prices[t.price].upticks, LEVEL)
+      push!(prices[t.price].upticks, FLAT)
     end
     minute_bucket_range.last_price = t.price
   end

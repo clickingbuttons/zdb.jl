@@ -29,18 +29,6 @@ git-tree-sha1 = "dba1e8614e98949abfa60480b13653813d8f0157"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
 version = "3.3.5+0"
 
-[[HTTP]]
-deps = ["Base64", "Dates", "IniFile", "MbedTLS", "NetworkOptions", "Sockets", "URIs"]
-git-tree-sha1 = "86ed84701fbfd1142c9786f8e53c595ff5a4def9"
-uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "0.9.10"
-
-[[IniFile]]
-deps = ["Test"]
-git-tree-sha1 = "098e4d2c533924c921f9f9847274f2ad89e018b8"
-uuid = "83e8ac13-25f8-5344-8a64-a9f2b223428f"
-version = "0.5.0"
-
 [[InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
@@ -53,9 +41,9 @@ version = "1.3.0"
 
 [[JSON3]]
 deps = ["Dates", "Mmap", "Parsers", "StructTypes", "UUIDs"]
-git-tree-sha1 = "f60c1aac37195252ed40895350e289147b42d5c5"
+git-tree-sha1 = "7d58534ffb62cd947950b3aa9b993e63307a6125"
 uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-version = "1.7.2"
+version = "1.9.2"
 
 [[LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -107,12 +95,6 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
-[[MbedTLS]]
-deps = ["Dates", "MbedTLS_jll", "Random", "Sockets"]
-git-tree-sha1 = "1c38e51c3d08ef2278062ebceade0e46cefc96fe"
-uuid = "739be429-bea8-5141-9913-cc70e7f3736d"
-version = "1.0.3"
-
 [[MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
@@ -122,9 +104,9 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[ModernGL]]
 deps = ["Libdl"]
-git-tree-sha1 = "326957556e9cc9253615114c04bb0096a2a69bb8"
+git-tree-sha1 = "1b4ca9b2956401690dfbf1b49e345ca539b54b03"
 uuid = "66fc600b-dfda-50eb-8b99-91cfa97b1301"
-version = "1.1.2"
+version = "1.1.3"
 
 [[MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
@@ -134,9 +116,9 @@ uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
 [[Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "223a825cccef2228f3fdbf2ecc7ca93363059073"
+git-tree-sha1 = "98f59ff3639b3d9485a03a72f3ab35bab9465720"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "1.0.16"
+version = "2.0.6"
 
 [[Pkg]]
 deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
@@ -171,9 +153,9 @@ uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [[StructTypes]]
 deps = ["Dates", "UUIDs"]
-git-tree-sha1 = "d7f4287dbc1e590265f50ceda1b40ed2bb31bbbb"
+git-tree-sha1 = "d24a825a95a6d98c385001212dc9020d609f2d4f"
 uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
-version = "1.4.0"
+version = "1.8.1"
 
 [[TOML]]
 deps = ["Dates"]
@@ -182,15 +164,6 @@ uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [[Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-
-[[Test]]
-deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
-uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[[URIs]]
-git-tree-sha1 = "97bbe755a53fe859669cd907f2d96aee8d2c1355"
-uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.3.0"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]

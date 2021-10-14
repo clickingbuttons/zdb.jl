@@ -88,7 +88,7 @@ function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
     for (price, price_bucket) in volumes
       offset_z = 0f0
       tick_num = 0
-      tick_type = Aggs.LEVEL
+      tick_type = Aggs.FLAT
       for (trade, uptick) in zip(price_bucket.trades, price_bucket.upticks)
         height = Float32(scale_z * trade.size / 2)
         transform = GL.translate(
@@ -128,7 +128,7 @@ function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
           red = Float32((105 + tick_num * 10) / 255)
           green = Float32((105 + tick_num * 10) / 255)
           blue = Float32((105 + tick_num * 10) / 255)
-          if tick_type == Aggs.LEVEL && tick_num < 255
+          if tick_type == Aggs.FLAT && tick_num < 255
             tick_num += 1
           else
             tick_num = 0
