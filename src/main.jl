@@ -12,7 +12,6 @@ include("./camera.jl")
 using .Camera
 include("./axes.jl")
 using .Axes
-include("./scan.jl")
 include("./zdb.jl")
 include("./aggs.jl")
 using .Aggs
