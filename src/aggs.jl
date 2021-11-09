@@ -37,6 +37,7 @@ mutable struct MinuteBucketRange
   max_volume::UInt32
   min_price_distance::Float32
   last_price::Float32
+  num_trades::UInt64
 end
 
 struct OHLCV
@@ -86,7 +87,7 @@ function aggregate_trades(
     syms::Vector{UInt16} = p[2].data
     pricess::Vector{Float64} = p[3].data
     sizes::Vector{UInt32} = p[4].data
-    conds::Vector{UInt32} = p[4].data
+    conds::Vector{UInt32} = p[5].data
     for i in 1:length(syms)
       sym = trade_syms[syms[i]]
       agg1d = agg1ds[sym]
@@ -107,9 +108,11 @@ function aggregate_trades(
           Range(t.price, t.price),
           UInt32(0),
           100f0,
-          NaN32
+          NaN32,
+          0
         )
       end
+      minute_bucket_range.num_trades += 1 
 
       minute = round(Int64, (t.ts - date_nanos) / (60 * 1_000_000_000))
 
@@ -155,7 +158,6 @@ function aggregate_trades(
       minute_bucket_range.last_price = t.price
     end
   end
-  println("bucketed trades")
 
   res
 end

@@ -3,7 +3,6 @@ module Cube
 using Random
 using ModernGL
 using GLFW
-import ModernGL: @glfunc, GLFunc, getprocaddress_e
 using ..Aggs
 using ..GL
 using ..Axes
@@ -68,7 +67,6 @@ const indices = UInt32[
 const max_num_cubes = 1_000_000
 const GL_MAP_PERSISTENT_BIT = 0x0040
 const GL_MAP_COHERENT_BIT = 0x0080
-@glfunc glBufferStorage(target::GLenum, size::GLsizei, data::Ptr{Cvoid}, flags::GLbitfield)::Cvoid
 num_cubes = 0
 models = Float32[]
 colors = Float32[]
@@ -145,7 +143,6 @@ function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
 
   #glBufferData(GL_ARRAY_BUFFER, sizeof(models), models, GL_STATIC_DRAW)
   #glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW)
-  println("num_cubes $(num_cubes)")
 end
 
 function init(window::GLFW.Window)
@@ -215,19 +212,16 @@ function key_callback(_window, key, _scancode, action, mods)
     if mods == GLFW.MOD_SHIFT
       symbol_index -= 1
       if symbol_index < 1
-        println("start")
         symbol_index = num_symbols
       end
     else
       symbol_index += 1
       if symbol_index > num_symbols
-        println("end")
         symbol_index = 1
       end
     end
     global symbol = minute_bucket_keys[symbol_index]
-    println(symbol_index, " ", symbol)
-    write_cubes(minute_bucket_ranges[symbol])
+    loadSymbol(symbol)
   end
 end
 
@@ -242,7 +236,10 @@ end
 
 function loadSymbol(sym::String)
   global symbol = sym
-  write_cubes(minute_bucket_ranges[symbol])
+  minute_bucket_range = minute_bucket_ranges[symbol]
+  symbol_index = findfirst(s -> s == sym, minute_bucket_keys)
+  println("$sym ($symbol_index) $(minute_bucket_range.num_trades)")
+  write_cubes(minute_bucket_range)
 end
 
 end
