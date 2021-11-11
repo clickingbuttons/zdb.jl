@@ -4,6 +4,19 @@ using GLFW
 using ModernGL
 using LinearAlgebra
 
+struct Vec2{S<:AbstractFloat}
+  x::S
+  y::S
+end
+Vec2(p::Vector{Float32}) = Vec2(p[1], p[2])
+
+struct Vec3{S<:AbstractFloat}
+  x::S
+  y::S
+  z::S
+end
+Vec3(p::Vector{Float32}) = Vec3(p[1], p[2], p[3])
+
 function sourcecompileshader(shaderID::GLuint, shadercode::String)::Nothing
   shadercode = Vector{UInt8}(shadercode)
   shader_code_ptrs = Ptr{UInt8}[pointer(shadercode)]

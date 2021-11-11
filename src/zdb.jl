@@ -11,6 +11,8 @@ nanoseconds(x::Date)::Int64 = (Dates.value(DateTime(x)) - Dates.UNIXEPOCH) * 1_0
 nanoseconds(x::DateTime)::Int64 = (Dates.value(x) - Dates.UNIXEPOCH) * 1_000_000
 nanoseconds(x::String)::Int64 = nanoseconds(Date(x, dateformat"y-m-d"))
 
+datetime(nanos::Int64) = unix2datetime(nanos / 1_000_000_000)
+
 @enum ColumnType begin
   Timestamp
   Symbol8

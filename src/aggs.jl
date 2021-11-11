@@ -90,6 +90,9 @@ function aggregate_trades(
     conds::Vector{UInt32} = p[5].data
     for i in 1:length(syms)
       sym = trade_syms[syms[i]]
+      if sym != "SPY"
+        continue
+      end
       agg1d = agg1ds[sym]
       t = Trade(
         tss[i],
