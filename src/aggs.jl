@@ -72,6 +72,14 @@ function get_agg1ds(date::String)::Dict{String, OHLCV}
   res
 end
 
+function prettyprint(trade::Trade)
+  nanos = trade.ts
+  date = zdb.datetime(nanos)
+  conditions = reinterpret(UInt8, [trade.conditions])
+  conditions = convert(Vector{Int16}, conditions)
+  println("$(date) ($(trade.ts)) $(trade.size) $(trade.price) $(conditions) $(trade.err)")
+end
+
 function aggregate_trades(
   agg1ds::Dict{String, OHLCV},
   date::String
@@ -90,7 +98,7 @@ function aggregate_trades(
     sizes::Vector{UInt32} = p[4].data
     conds::Vector{UInt32} = p[5].data
     errs::Vector{UInt8} = p[6].data
-    for i in 1:length(syms)
+    for i in 1:length(tss)
       sym = trade_syms[syms[i]]
       if sym != "SPY"
         continue
@@ -105,7 +113,7 @@ function aggregate_trades(
       )
 
       if t.err != UInt8(0)
-        println("err $(t)")
+        prettyprint(t)
       end
 
       # Cheat for now and use OHLCV until we store errors

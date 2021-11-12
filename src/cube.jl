@@ -134,7 +134,11 @@ function write_cubes(minute_bucket_range::Aggs.MinuteBucketRange)
         red = 1f0
         green = 1f0
         blue = 1f0
-        if uptick == Aggs.UP
+        if trade.err != UInt8(0)
+          red = 0f0
+          green = 0f0
+          blue = 0f0
+        elseif uptick == Aggs.UP
           red = Float32((30 - tick_num / 10) / 255)
           green = Float32((105 + tick_num * 10) / 255)
           blue = Float32((30 - tick_num / 10) / 255)
@@ -324,10 +328,7 @@ function click_callback(window::GLFW.Window, button::GLFW.MouseButton, action::G
         end
         for i in 1:length(price_bucket.trades)
           trade = price_bucket.trades[i]
-          nanos = trade.ts
-          date = zdb.datetime(nanos)
-          conditions = reinterpret(UInt8, [trade.conditions])
-          println("$(date) ($(trade.ts)) $(trade.size) $(trade.price) $(conditions) $(price_bucket.upticks[i]) $(trade.err)")
+          Aggs.prettyprint(trade)
         end
       end 
     end 
