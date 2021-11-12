@@ -327,7 +327,7 @@ function click_callback(window::GLFW.Window, button::GLFW.MouseButton, action::G
           nanos = trade.ts
           date = zdb.datetime(nanos)
           conditions = reinterpret(UInt8, [trade.conditions])
-          println("$(date) ($(trade.ts)) $(size) $(trade.price) $(conditions) $(price_bucket.upticks[i])")
+          println("$(date) ($(trade.ts)) $(trade.size) $(trade.price) $(conditions) $(price_bucket.upticks[i]) $(trade.err)")
         end
       end 
     end 

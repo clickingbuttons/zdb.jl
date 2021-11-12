@@ -39,7 +39,7 @@ function main()
   GL.initDebug()
   Axes.init(window)
   Cube.init(window)
-  Cube.loadDate("2004-01-02")
+  Cube.loadDate("2021-11-10")
   Cube.loadSymbol("SPY")
 
   glClearColor(0.2, 0.3, 0.3, 1.0)

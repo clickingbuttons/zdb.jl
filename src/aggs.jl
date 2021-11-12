@@ -23,6 +23,7 @@ struct Trade
   size::UInt32
   price::Float32
   conditions::UInt32
+  err::UInt8
 end
 
 mutable struct PriceBucket
@@ -80,7 +81,7 @@ function aggregate_trades(
   date = DateTime(date, DATE_FORMAT)
   date_nanos = zdb.nanoseconds(date)
   next_date = date + Dates.Day(1)
-  columns = ["ts", "sym", "price", "size", "cond"]
+  columns = ["ts", "sym", "price", "size", "cond", "err"]
 
   for p in zdb.partition_iter(trades_table, date, next_date, columns)
     tss::Vector{Int64} = p[1].data
@@ -88,6 +89,7 @@ function aggregate_trades(
     pricess::Vector{Float64} = p[3].data
     sizes::Vector{UInt32} = p[4].data
     conds::Vector{UInt32} = p[5].data
+    errs::Vector{UInt8} = p[6].data
     for i in 1:length(syms)
       sym = trade_syms[syms[i]]
       if sym != "SPY"
@@ -98,8 +100,13 @@ function aggregate_trades(
         tss[i],
         sizes[i],
         pricess[i],
-        conds[i]
+        conds[i],
+        errs[i]
       )
+
+      if t.err != UInt8(0)
+        println("err $(t)")
+      end
 
       # Cheat for now and use OHLCV until we store errors
       if t.price < agg1d.low || t.price > agg1d.high
