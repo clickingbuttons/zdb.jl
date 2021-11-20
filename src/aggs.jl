@@ -6,6 +6,8 @@ using ..zdb
 const agg1d_table = zdb.open("agg1d")
 const trades_table = zdb.open("trades")
 const DATE_FORMAT = "yyyy-mm-dd"
+const min_tick_size = 1f-6
+const default_symbol = "SPY" # for fast testing
 
 mutable struct Range
   min::Float32
@@ -38,6 +40,8 @@ mutable struct MinuteBucketRange
   max_volume::UInt32
   min_price_distance::Float32
   last_price::Float32
+  liquidity::Float64
+  total_volume::UInt64
   num_trades::UInt64
 end
 
@@ -80,12 +84,81 @@ function prettyprint(trade::Trade)
   println("$(date) ($(trade.ts)) $(trade.size) $(trade.price) $(conditions) $(trade.err)")
 end
 
-function aggregate_trades(
-  agg1ds::Dict{String, OHLCV},
-  date::String
-)::Dict{String, MinuteBucketRange}
-  res = Dict{String, MinuteBucketRange}()
+# Inspired by https://link.springer.com/article/10.1057/jdhf.2009.16#Sec9
+function predicterror(minute_bucket_range::MinuteBucketRange, trade::Trade)::Bool
+  liquidity = minute_bucket_range.liquidity
+  vwap = liquidity / minute_bucket_range.total_volume
+  # SPY is very liquid at $34 billion / day
+  max_deviation = 0.1
+  if liquidity > 10_000_000_000
+    max_deviation = 0.01
+  elseif liquidity > 1_000_000_000
+    max_deviation = 0.03
+  elseif liquidity > 1_000_000
+    max_deviation = 0.05
+  elseif liquidity > 100_000
+    max_deviation = 0.09
+  elseif liquidity > 10_000
+    max_deviation = 0.20
+  end
 
+  # it's officially an error
+  if trade.err != UInt8(0)
+    println("should get this:")
+    println(minute_bucket_range.last_price)
+    println(minute_bucket_range.liquidity)
+    println(minute_bucket_range.total_volume)
+    println(vwap)
+    println(abs(trade.price - vwap), " ", abs(trade.price - vwap) / vwap)
+    println(max_deviation)
+  end
+  # first tick
+  if isnan(minute_bucket_range.last_price)
+    return false
+  end
+  # 1. Minumum tick effect
+  # Useful for stocks <$1 that are soon to be delisted
+  if abs(trade.price - minute_bucket_range.last_price) <= min_tick_size
+    return false
+  end
+
+  # 2. Price level effect.
+  # Instead of hardcoding values allowing larger volitility on cheaper shares, use vwap
+  # and different liquidity brackets
+
+  if abs(trade.price - vwap) / vwap > max_deviation
+    return true
+  end
+
+  # 3. Median Absolute Deviation.
+  # Unfortunately this is rather expensive to compute, so skip it
+
+  false
+end
+
+function percentages(trades::Vector{Aggs.Trade})
+  liquidity = 0e0
+  vol = UInt64(0)
+  cur_p = 0e0
+  map(t -> begin
+    vol += t.size
+    liquidity += t.price * t.size
+    if cur_p == 0e0
+      cur_p = t.price
+      0e0
+    else
+      vwap = liquidity / vol
+      cur_p = t.price
+      abs(t.price - vwap) / vwap
+    end
+  end, trades)
+end
+
+function get_trades(
+  date::String,
+  symbol::String
+)::Vector{Trade}
+  res = Trade[]
   date = DateTime(date, DATE_FORMAT)
   date_nanos = zdb.nanoseconds(date)
   next_date = date + Dates.Day(1)
@@ -100,8 +173,52 @@ function aggregate_trades(
     errs::Vector{UInt8} = p[6].data
     for i in 1:length(tss)
       sym = trade_syms[syms[i]]
-      if sym != "SPY"
+      if sym != symbol
         continue
+      end
+      t = Trade(
+        tss[i],
+        sizes[i],
+        pricess[i],
+        conds[i],
+        errs[i]
+      )
+      push!(res, t)
+    end
+  end
+
+  res
+end
+
+function plot_percentages(date::String, sym::String, plot::Any)
+  trades = get_trades(date, sym)
+  percents = percentages(trades)
+  plot(1:length(percents), percents)
+end
+
+function aggregate_trades(
+  agg1ds::Dict{String, OHLCV},
+  date::String
+)::Dict{String, MinuteBucketRange}
+  res = Dict{String, MinuteBucketRange}()
+
+  date = DateTime(date, DATE_FORMAT)
+  date_nanos = zdb.nanoseconds(date)
+  next_date = date + Dates.Day(1)
+  columns = ["ts", "sym", "price", "size", "cond", "err"]
+
+  println("errors")
+  for p in zdb.partition_iter(trades_table, date, next_date, columns)
+    tss::Vector{Int64} = p[1].data
+    syms::Vector{UInt16} = p[2].data
+    pricess::Vector{Float64} = p[3].data
+    sizes::Vector{UInt32} = p[4].data
+    conds::Vector{UInt32} = p[5].data
+    errs::Vector{UInt8} = p[6].data
+    for i in 1:length(tss)
+      sym = trade_syms[syms[i]]
+      if sym != default_symbol
+        #continue
       end
       agg1d = agg1ds[sym]
       t = Trade(
@@ -111,15 +228,11 @@ function aggregate_trades(
         conds[i],
         errs[i]
       )
-
-      if t.err != UInt8(0)
-        prettyprint(t)
-      end
-
       # Cheat for now and use OHLCV until we store errors
       if t.price < agg1d.low || t.price > agg1d.high
         continue
       end
+
       minute_bucket_range = get!(res, sym) do
         MinuteBucketRange(
           Dict{Float32, UInt32}(),
@@ -127,10 +240,32 @@ function aggregate_trades(
           UInt32(0),
           100f0,
           NaN32,
+          0,
+          0,
           0
         )
       end
+      # Check for error
+      if t.err != UInt8(0)
+        prettyprint(t)
+      end
+      #=
+      if predicterror(minute_bucket_range, t)
+        if t.err != UInt8(0)
+          println("good!")
+          prettyprint(t)
+        else
+          println("false positive!")
+          prettyprint(t)
+        end
+      elseif t.err != UInt8(0)
+        println("missed!")
+        prettyprint(t)
+      end
+      =#
       minute_bucket_range.num_trades += 1 
+      minute_bucket_range.total_volume += t.size
+      minute_bucket_range.liquidity += t.price * t.size
 
       minute = round(Int64, (t.ts - date_nanos) / (60 * 1_000_000_000))
 
@@ -144,6 +279,7 @@ function aggregate_trades(
       end
       prices[t.price].volume += t.size
       push!(prices[t.price].trades, t)
+
 
       # Check volume range
       new_volume = prices[t.price].volume
@@ -175,6 +311,7 @@ function aggregate_trades(
       end
       minute_bucket_range.last_price = t.price
     end
+
   end
 
   res

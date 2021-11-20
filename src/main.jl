@@ -40,7 +40,7 @@ function main()
   Axes.init(window)
   Cube.init(window)
   Cube.loadDate("2021-11-10")
-  Cube.loadSymbol("SPY")
+  Cube.loadSymbol(Aggs.default_symbol)
 
   glClearColor(0.2, 0.3, 0.3, 1.0)
   glEnable(GL_DEPTH_TEST)

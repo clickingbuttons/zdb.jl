@@ -349,7 +349,8 @@ function loadSymbol(sym::String)
   global symbol = sym
   minute_bucket_range = minute_bucket_ranges[symbol]
   symbol_index = findfirst(s -> s == sym, minute_bucket_keys)
-  println("$sym ($symbol_index) $(minute_bucket_range.num_trades)")
+  vwap = minute_bucket_range.liquidity / minute_bucket_range.total_volume
+  println("$sym ($symbol_index) $(minute_bucket_range.num_trades) $(vwap) x $(minute_bucket_range.total_volume) = $(minute_bucket_range.liquidity)")
   write_cubes(minute_bucket_range)
 end
 
